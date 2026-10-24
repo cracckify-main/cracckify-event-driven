@@ -16,7 +16,15 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+app:
+  kafka:
+    topics:
+      customer-events: customer.events
 eureka:
   instance:
     preferIpAddress: true

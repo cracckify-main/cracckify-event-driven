@@ -1,0 +1,39 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: customer-summary
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/customer_summary
+
+  kafka:
+    bootstrap-servers: localhost:29092
+    consumer:
+      group-id: customer-summary-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.value.default.type: com.eazybytes.common.event.BankDataChangedEvent
+        spring.json.trusted.packages: com.eazybytes.common.event
+        spring.json.use.type.headers: false
+
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+app:
+  kafka:
+    topics:
+      customer-events: customer.events
+      accounts-events: accounts.events
+      cards-events: cards.events
+      loans-events: loans.events

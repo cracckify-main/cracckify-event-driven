@@ -1,6 +1,7 @@
 package com.eazybytes.loans.entity;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,5 +23,8 @@ public class Loans extends BaseEntity {
     private int amountPaid;
     private int outstandingAmount;
     private boolean activeSw;
+
+    @Column(name = "event_revision", nullable = false)
+    private long eventRevision;
 
 }

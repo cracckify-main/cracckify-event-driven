@@ -2,12 +2,14 @@ package com.eazybytes.accounts.service.impl;
 
 import com.eazybytes.accounts.constants.AccountsConstants;
 import com.eazybytes.accounts.dto.AccountsDto;
+import com.eazybytes.accounts.event.AccountsEventPublisher;
 import com.eazybytes.accounts.entity.Accounts;
 import com.eazybytes.accounts.exception.AccountAlreadyExistsException;
 import com.eazybytes.accounts.exception.ResourceNotFoundException;
 import com.eazybytes.accounts.mapper.AccountsMapper;
 import com.eazybytes.accounts.repository.AccountsRepository;
 import com.eazybytes.accounts.service.IAccountsService;
+import com.eazybytes.common.event.BankDataChangedEvent;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,7 @@ import java.util.Random;
 public class AccountsServiceImpl  implements IAccountsService {
 
     private AccountsRepository accountsRepository;
+    private AccountsEventPublisher accountsEventPublisher;
 
     /**
      * @param mobileNumber - String
@@ -30,7 +33,15 @@ public class AccountsServiceImpl  implements IAccountsService {
         if(optionalAccounts.isPresent()){
             throw new AccountAlreadyExistsException("Account already registered with given mobileNumber "+mobileNumber);
         }
-        accountsRepository.save(createNewAccount(mobileNumber));
+        Accounts account = createNewAccount(mobileNumber);
+        long nextRevision = accountsRepository
+                .findTopByMobileNumberOrderByEventRevisionDesc(mobileNumber)
+                .map(Accounts::getEventRevision)
+                .orElse(0L) + 1;
+        account.setEventRevision(nextRevision);
+
+        Accounts savedAccount = accountsRepository.save(account);
+        accountsEventPublisher.publish(savedAccount, BankDataChangedEvent.ChangeType.CREATED);
     }
 
     /**
@@ -71,7 +82,9 @@ public class AccountsServiceImpl  implements IAccountsService {
                 AccountsConstants.ACTIVE_SW).orElseThrow(() -> new ResourceNotFoundException("Account", "mobileNumber",
                 accountsDto.getMobileNumber()));
         AccountsMapper.mapToAccounts(accountsDto, account);
-        accountsRepository.save(account);
+        account.setEventRevision(account.getEventRevision() + 1);
+        Accounts savedAccount = accountsRepository.save(account);
+        accountsEventPublisher.publish(savedAccount, BankDataChangedEvent.ChangeType.UPDATED);
         return  true;
     }
 
@@ -85,7 +98,9 @@ public class AccountsServiceImpl  implements IAccountsService {
                 () -> new ResourceNotFoundException("Account", "accountNumber", accountNumber.toString())
         );
         account.setActiveSw(AccountsConstants.IN_ACTIVE_SW);
-        accountsRepository.save(account);
+        account.setEventRevision(account.getEventRevision() + 1);
+        Accounts savedAccount = accountsRepository.save(account);
+        accountsEventPublisher.publish(savedAccount, BankDataChangedEvent.ChangeType.DEACTIVATED);
         return true;
     }
 

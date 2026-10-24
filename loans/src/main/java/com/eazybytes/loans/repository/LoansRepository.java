@@ -11,4 +11,6 @@ public interface LoansRepository extends JpaRepository<Loans, Long> {
 
     Optional<Loans> findByMobileNumberAndActiveSw(String mobileNumber, boolean activeSw);
 
+    Optional<Loans> findTopByMobileNumberOrderByEventRevisionDesc(String mobileNumber);
+
 }

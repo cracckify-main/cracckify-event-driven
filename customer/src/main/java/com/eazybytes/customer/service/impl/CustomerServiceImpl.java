@@ -1,8 +1,10 @@
 package com.eazybytes.customer.service.impl;
 
+import com.eazybytes.common.event.BankDataChangedEvent;
 import com.eazybytes.customer.constants.CustomerConstants;
 import com.eazybytes.customer.dto.CustomerDto;
 import com.eazybytes.customer.entity.Customer;
+import com.eazybytes.customer.event.CustomerEventPublisher;
 import com.eazybytes.customer.exception.CustomerAlreadyExistsException;
 import com.eazybytes.customer.exception.ResourceNotFoundException;
 import com.eazybytes.customer.mapper.CustomerMapper;
@@ -18,6 +20,7 @@ import java.util.Optional;
 public class CustomerServiceImpl implements ICustomerService {
 
     private CustomerRepository customerRepository;
+    private final CustomerEventPublisher customerEventPublisher;
 
     @Override
     public void createCustomer(CustomerDto customerDto) {
@@ -29,7 +32,17 @@ public class CustomerServiceImpl implements ICustomerService {
             throw new CustomerAlreadyExistsException("Customer already registered with given mobileNumber "
                     + customerDto.getMobileNumber());
         }
+        long nextRevision = customerRepository
+                .findTopByMobileNumberOrderByEventRevisionDesc(customerDto.getMobileNumber())
+                .map(Customer::getEventRevision)
+                .orElse(0L) + 1;
+
+        customer.setEventRevision(nextRevision);
         Customer savedCustomer = customerRepository.save(customer);
+        customerEventPublisher.publish(
+                savedCustomer,
+                BankDataChangedEvent.ChangeType.CREATED
+        );
     }
 
     @Override
@@ -43,10 +56,19 @@ public class CustomerServiceImpl implements ICustomerService {
 
     @Override
     public boolean updateCustomer(CustomerDto customerDto) {
-        Customer customer = customerRepository.findByMobileNumberAndActiveSw(customerDto.getMobileNumber(), true)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer", "mobileNumber", customerDto.getMobileNumber()));
+        Customer customer = customerRepository
+                .findByMobileNumberAndActiveSw(customerDto.getMobileNumber(), true)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Customer", "mobileNumber", customerDto.getMobileNumber()));
+
         CustomerMapper.mapToCustomer(customerDto, customer);
-        customerRepository.save(customer);
+        customer.setEventRevision(customer.getEventRevision() + 1);
+
+        Customer savedCustomer = customerRepository.save(customer);
+        customerEventPublisher.publish(
+                savedCustomer,
+                BankDataChangedEvent.ChangeType.UPDATED
+        );
         return true;
     }
 
@@ -55,8 +77,15 @@ public class CustomerServiceImpl implements ICustomerService {
         Customer customer = customerRepository.findById(customerId).orElseThrow(
                 () -> new ResourceNotFoundException("Customer", "customerId", customerId)
         );
+
         customer.setActiveSw(CustomerConstants.IN_ACTIVE_SW);
-        customerRepository.save(customer);
+        customer.setEventRevision(customer.getEventRevision() + 1);
+
+        Customer savedCustomer = customerRepository.save(customer);
+        customerEventPublisher.publish(
+                savedCustomer,
+                BankDataChangedEvent.ChangeType.DEACTIVATED
+        );
         return true;
     }
 

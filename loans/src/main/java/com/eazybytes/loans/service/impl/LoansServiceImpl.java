@@ -2,12 +2,14 @@ package com.eazybytes.loans.service.impl;
 
 import com.eazybytes.loans.constants.LoansConstants;
 import com.eazybytes.loans.dto.LoansDto;
+import com.eazybytes.loans.event.LoansEventPublisher;
 import com.eazybytes.loans.entity.Loans;
 import com.eazybytes.loans.exception.LoanAlreadyExistsException;
 import com.eazybytes.loans.exception.ResourceNotFoundException;
 import com.eazybytes.loans.mapper.LoansMapper;
 import com.eazybytes.loans.repository.LoansRepository;
 import com.eazybytes.loans.service.ILoansService;
+import com.eazybytes.common.event.BankDataChangedEvent;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,7 @@ import java.util.Random;
 public class LoansServiceImpl implements ILoansService {
 
     private LoansRepository loansRepository;
+    private LoansEventPublisher loansEventPublisher;
 
     /**
      * @param mobileNumber - Mobile Number of the Customer
@@ -30,7 +33,15 @@ public class LoansServiceImpl implements ILoansService {
         if (optionalLoan.isPresent()) {
             throw new LoanAlreadyExistsException("Loan already registered with given mobileNumber " + mobileNumber);
         }
-        loansRepository.save(createNewLoan(mobileNumber));
+        Loans loan = createNewLoan(mobileNumber);
+        long nextRevision = loansRepository
+                .findTopByMobileNumberOrderByEventRevisionDesc(mobileNumber)
+                .map(Loans::getEventRevision)
+                .orElse(0L) + 1;
+        loan.setEventRevision(nextRevision);
+
+        Loans savedLoan = loansRepository.save(loan);
+        loansEventPublisher.publish(savedLoan, BankDataChangedEvent.ChangeType.CREATED);
     }
 
     /**
@@ -72,7 +83,9 @@ public class LoansServiceImpl implements ILoansService {
                 LoansConstants.ACTIVE_SW).orElseThrow(
                 () -> new ResourceNotFoundException("Loan", "LoanNumber", loansDto.getLoanNumber().toString()));
         LoansMapper.mapToLoans(loansDto, loan);
-        loansRepository.save(loan);
+        loan.setEventRevision(loan.getEventRevision() + 1);
+        Loans savedLoan = loansRepository.save(loan);
+        loansEventPublisher.publish(savedLoan, BankDataChangedEvent.ChangeType.UPDATED);
         return true;
     }
 
@@ -86,7 +99,9 @@ public class LoansServiceImpl implements ILoansService {
                 .orElseThrow(() -> new ResourceNotFoundException("Loan", "loanNumber", loanNumber.toString())
                 );
         loan.setActiveSw(LoansConstants.IN_ACTIVE_SW);
-        loansRepository.save(loan);
+        loan.setEventRevision(loan.getEventRevision() + 1);
+        Loans savedLoan = loansRepository.save(loan);
+        loansEventPublisher.publish(savedLoan, BankDataChangedEvent.ChangeType.DEACTIVATED);
         return true;
     }
 

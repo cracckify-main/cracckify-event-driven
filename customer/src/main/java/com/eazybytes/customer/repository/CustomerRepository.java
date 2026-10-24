@@ -11,5 +11,5 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
     Optional<Customer> findByMobileNumberAndActiveSw(String mobileNumber,boolean active);
 
-
+    Optional<Customer> findTopByMobileNumberOrderByEventRevisionDesc(String mobileNumber);
 }
