@@ -22,4 +22,6 @@ public class Customer extends BaseEntity {
     private String mobileNumber;
     @Column(name = "active_sw", nullable = false)
     private boolean activeSw = false;
+    @Column(name = "event_revision", nullable = false)
+    private long eventRevision;
 }
