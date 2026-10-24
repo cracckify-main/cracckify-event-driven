@@ -42,7 +42,7 @@ services:
   mongo-express:
     image: mongo-express:1.0.2-20
     ports:
-      - "8081:8081"
+      - "8084:8081"
     environment:
       ME_CONFIG_MONGODB_URL: "mongodb://mongodb:27017/"
       ME_CONFIG_BASICAUTH_ENABLED: "false"
