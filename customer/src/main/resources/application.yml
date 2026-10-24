@@ -51,4 +51,4 @@ logging:
 app:
   kafka:
     topics:
-      events: customer.events
+      customer-events: "customer.events"

@@ -11,4 +11,6 @@ public interface CardsRepository extends JpaRepository<Cards, Long> {
 
     Optional<Cards> findByMobileNumberAndActiveSw(String mobileNumber, boolean activeSw);
 
+    Optional<Cards> findTopByMobileNumberOrderByEventRevisionDesc(String mobileNumber);
+
 }

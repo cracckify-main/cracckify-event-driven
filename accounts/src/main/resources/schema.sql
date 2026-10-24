@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `accounts` (
    `account_type` varchar(100) NOT NULL,
    `branch_address` varchar(200) NOT NULL,
    `active_sw` boolean NOT NULL default 0,
+   `event_revision` bigint NOT NULL default 0,
    `created_at` date NOT NULL,
    `created_by` varchar(20) NOT NULL,
    `updated_at` date DEFAULT NULL,

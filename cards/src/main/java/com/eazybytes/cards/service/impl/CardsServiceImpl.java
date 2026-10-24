@@ -1,8 +1,10 @@
 package com.eazybytes.cards.service.impl;
 
+import com.eazybytes.common.event.BankDataChangedEvent;
 import com.eazybytes.cards.constants.CardsConstants;
 import com.eazybytes.cards.dto.CardsDto;
 import com.eazybytes.cards.entity.Cards;
+import com.eazybytes.cards.event.CardsEventPublisher;
 import com.eazybytes.cards.exception.CardAlreadyExistsException;
 import com.eazybytes.cards.exception.ResourceNotFoundException;
 import com.eazybytes.cards.mapper.CardsMapper;
@@ -20,6 +22,8 @@ public class CardsServiceImpl implements ICardsService {
 
     private CardsRepository cardsRepository;
 
+    private CardsEventPublisher cardsEventPublisher;
+
     /**
      * @param mobileNumber - Mobile Number of the Customer
      */
@@ -30,7 +34,14 @@ public class CardsServiceImpl implements ICardsService {
         if (optionalCard.isPresent()) {
             throw new CardAlreadyExistsException("Card already registered with given mobileNumber " + mobileNumber);
         }
-        cardsRepository.save(createNewCard(mobileNumber));
+        long nextRevision = cardsRepository
+                .findTopByMobileNumberOrderByEventRevisionDesc(mobileNumber)
+                .map(Cards::getEventRevision)
+                .orElse(0L) + 1;
+        Cards card = createNewCard(mobileNumber);
+        card.setEventRevision(nextRevision);
+        Cards savedCard = cardsRepository.save(card);
+        cardsEventPublisher.publish(savedCard, BankDataChangedEvent.ChangeType.CREATED);
     }
 
     /**
@@ -72,7 +83,9 @@ public class CardsServiceImpl implements ICardsService {
                 CardsConstants.ACTIVE_SW).orElseThrow(() -> new ResourceNotFoundException("Card", "CardNumber",
                 cardsDto.getCardNumber().toString()));
         CardsMapper.mapToCards(cardsDto, card);
-        cardsRepository.save(card);
+        card.setEventRevision(card.getEventRevision() + 1);
+        Cards savedCard = cardsRepository.save(card);
+        cardsEventPublisher.publish(savedCard, BankDataChangedEvent.ChangeType.UPDATED);
         return true;
     }
 
@@ -86,7 +99,9 @@ public class CardsServiceImpl implements ICardsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Card", "cardNumber", cardNumber.toString())
                 );
         card.setActiveSw(CardsConstants.IN_ACTIVE_SW);
-        cardsRepository.save(card);
+        card.setEventRevision(card.getEventRevision() + 1);
+        Cards savedCard = cardsRepository.save(card);
+        cardsEventPublisher.publish(savedCard, BankDataChangedEvent.ChangeType.DEACTIVATED);
         return true;
     }
 

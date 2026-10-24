@@ -2,6 +2,7 @@ package com.eazybytes.accounts.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
 import lombok.*;
 
 @Entity
@@ -18,5 +19,7 @@ public class Accounts extends BaseEntity {
     private String branchAddress;
     private String mobileNumber;
     private boolean activeSw;
+    @Column(name = "event_revision", nullable = false)
+    private long eventRevision;
 
 }

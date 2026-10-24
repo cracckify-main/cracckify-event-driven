@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
 import lombok.*;
 
 @Entity
@@ -22,4 +23,6 @@ public class Cards extends BaseEntity {
     private int amountUsed;
     private int availableAmount;
     private boolean activeSw;
+    @Column(name = "event_revision", nullable = false)
+    private long eventRevision;
 }
