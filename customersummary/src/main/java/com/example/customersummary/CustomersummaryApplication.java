@@ -1,0 +1,13 @@
+package com.example.customersummary;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class CustomersummaryApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(CustomersummaryApplication.class, args);
+    }
+
+}
